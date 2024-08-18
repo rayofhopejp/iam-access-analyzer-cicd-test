@@ -17,11 +17,25 @@ env:
   AWS_REGION: ap-northeast-1
 
 jobs:
-  synth_cdk_and_run_iam_access_analyzer:
+  setup:
+    name: setup matrx
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.create-matrix.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: create matrix
+        id: create-matrix
+        run: |
+          echo "files=$(ls cdk.out | grep .template.json | jq -R . | jq -s -c .)" >> $GITHUB_OUTPUT
+          
+  synth_cdk:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
+    outputs:
+     RUNNER: ${{ runner.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -54,20 +68,27 @@ jobs:
       - name: CDK Synth
         run: |
           ${{ steps.set-var.outputs.synth_cmd }}
-
-      - name: Fetch reference policy from s3
-        id: getReferencePolicy
-        run: |
-          aws s3 cp ${{ secrets.REFERENCE_IDENTITY_POLICY }} ./reference-identity-policy.json
-        shell: bash
-        
+  run_iam_access_analyzer:
+    needs: [ setup, synth_cdk ]
+    runs-on: ${{needs.synth_cdk.outputs.RUNNER}}
+    defaults:
+      run:
+        working-directory: cdk.out
+    strategy:
+      max-parallel: 3      
+      matrix:
+        file: ${{fromJson(needs.setup.outputs.files)}}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
       - name: Run AWS AccessAnalyzer CheckNoNewAccess check
         id: run-aws-check-no-new-access
         uses: aws-actions/cloudformation-aws-iam-policy-validator@v1.0.1
         with:
           policy-check-type: 'CHECK_NO_NEW_ACCESS'
-          template-path: './cdk.out/cdk-stack.template.json'
-          reference-policy: './reference-identity-policy.json'
+          template-path: ${{ matrix.file }}
+          reference-policy: '../reference-files/reference.json'
           reference-policy-type: "IDENTITY"
           region: ${{env.AWS_REGION}}
         
