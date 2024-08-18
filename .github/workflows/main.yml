@@ -1,0 +1,76 @@
+name: Synth CDK and generate CFn files
+
+on:
+  pull_request:
+    types: [opened, review_requested]
+  push:
+    branches:
+      - 'cdk-v2'
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+  
+env:
+  AWS_OIDC_ROLE_ARN: ${{ secrets.OIDC_IAM_ROLE }}
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  synth_cdk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cdk
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set using var
+        id: set-var
+        run: |
+          ROLE=${{ env.AWS_OIDC_ROLE_ARN }}
+          SYNTH_CMD="npx cdk synth"
+          echo "synth_role=$ROLE" >> $GITHUB_OUTPUT
+          echo "synth_cmd=$SYNTH_CMD" >> $GITHUB_OUTPUT
+      - name: Assume Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.set-var.outputs.synth_role }}
+          aws-region: ${{env.AWS_REGION}}
+          role-session-name: GitHubSessionName
+          
+      - name: Cache CDK Dependency
+        uses: actions/cache@v3
+        id: cache_cdk_dependency_id
+        env:
+          cache-name: cache-cdk-dependency
+        with:
+          path: ./cdk/node_modules
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: CDK Synth
+        run: |
+          ${{ steps.set-var.outputs.synth_cmd }}
+
+      - name: Fetch reference policy from s3
+        id: getReferencePolicy
+        run: |
+          aws s3 cp ${{ secrets.REFERENCE_IDENTITY_POLICY }} ./reference-identity-policy.json
+        shell: bash
+        
+      - name: Run AWS AccessAnalyzer CheckNoNewAccess check
+        id: run-aws-check-no-new-access
+        uses: aws-actions/cloudformation-aws-iam-policy-validator@v1.0.1
+        with:
+          policy-check-type: 'CHECK_NO_NEW_ACCESS'
+          template-path: './cdk-stack.template.json'
+          reference-policy: './reference-identity-policy.json'
+          reference-policy-type: "IDENTITY"
+          region: ${{env.AWS_REGION}}
+        
