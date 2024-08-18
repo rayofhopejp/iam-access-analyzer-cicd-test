@@ -94,16 +94,14 @@ jobs:
         with:
           name: cdk.out
           path: cdk.out
-      - name: cd cdk.out
-        run: |
-          cd cdk.out
+
       - name: Run AWS AccessAnalyzer CheckNoNewAccess check
         id: run-aws-check-no-new-access
         uses: aws-actions/cloudformation-aws-iam-policy-validator@v1.0.1
         with:
           policy-check-type: 'CHECK_NO_NEW_ACCESS'
-          template-path: ${{ matrix.file }}
-          reference-policy: '../reference-files/reference.json'
+          template-path: ${{ format('cdk.out/{0}', matrix.file) }}
+          reference-policy: 'reference-files/reference.json'
           reference-policy-type: "IDENTITY"
           region: ${{env.AWS_REGION}}
         
