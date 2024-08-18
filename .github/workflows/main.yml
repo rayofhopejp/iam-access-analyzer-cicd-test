@@ -57,38 +57,20 @@ jobs:
       - name: CDK Synth
         run: |
           ${{ steps.set-var.outputs.synth_cmd }}
-      - run: echo "selected runner = ${{ runner.name }}"
-      
-  setup:
-    needs: synth_cdk
-    name: setup matrix
-    runs-on: ${{needs.synth_cdk.outputs.RUNNER}}
-    outputs:
-      files: ${{ steps.create-matrix.outputs.files }}
-    steps:
-      - uses: actions/checkout@v4
+
       - name: create matrix
+        uses: actions/checkout@v4
         id: create-matrix
         run: |
           echo "files=$(ls cdk.out | grep .template.json | jq -R . | jq -s -c .)" >> $GITHUB_OUTPUT
-  run_iam_access_analyzer:
-    name: run iam access analyzer custom policy checks
-    needs: [ setup, synth_cdk ]
-    runs-on: ${{needs.synth_cdk.outputs.RUNNER}}
-    defaults:
-      run:
-        working-directory: cdk.out
-    strategy:
-      max-parallel: 3      
-      matrix:
-        file: ${{fromJson(needs.setup.outputs.files)}}
-    permissions:
-      id-token: write
-      contents: read
-    steps:
+
       - name: Run AWS AccessAnalyzer CheckNoNewAccess check
         id: run-aws-check-no-new-access
         uses: aws-actions/cloudformation-aws-iam-policy-validator@v1.0.1
+        strategy:
+          max-parallel: 3      
+          matrix:
+            file: ${{fromJson(steps.create-matrix.outputs.files)}}
         with:
           policy-check-type: 'CHECK_NO_NEW_ACCESS'
           template-path: ${{ matrix.file }}
