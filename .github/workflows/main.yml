@@ -24,10 +24,10 @@ jobs:
       id-token: write
       contents: read
     outputs:
-     RUNNER: ${{ runner.name }}
+     CFnFileNames: ${{ steps.create-matrix.outputs.files }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
       - name: Set using var
         id: set-var
         run: |
@@ -43,7 +43,7 @@ jobs:
           role-session-name: GitHubSessionName
           
       - name: Cache CDK Dependency
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         id: cache_cdk_dependency_id
         env:
           cache-name: cache-cdk-dependency
@@ -59,18 +59,36 @@ jobs:
           ${{ steps.set-var.outputs.synth_cmd }}
 
       - name: create matrix
-        uses: actions/checkout@v4
         id: create-matrix
         run: |
           echo "files=$(ls cdk.out | grep .template.json | jq -R . | jq -s -c .)" >> $GITHUB_OUTPUT
-
+      - uses: actions/upload-artifact@master
+        with:
+          name: cdk.out
+          path: cdk.out
+  run_iam_access_analyzer:
+    name: run iam access analyzer custom policy checks
+    needs: synth_cdk
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 3      
+      matrix:
+        file: ${{fromJson(needs.synth_cdk.outputs.CFnFileNames)}}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/download-artifact@master
+        with:
+          name: cdk.out
+          path: cdk.out
+      - name: cd cdk.out
+        run: |
+          cd cdk.out
       - name: Run AWS AccessAnalyzer CheckNoNewAccess check
         id: run-aws-check-no-new-access
         uses: aws-actions/cloudformation-aws-iam-policy-validator@v1.0.1
-        strategy:
-          max-parallel: 3      
-          matrix:
-            file: ${{fromJson(steps.create-matrix.outputs.files)}}
         with:
           policy-check-type: 'CHECK_NO_NEW_ACCESS'
           template-path: ${{ matrix.file }}
