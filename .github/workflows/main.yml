@@ -16,20 +16,9 @@ env:
   AWS_OIDC_ROLE_ARN: ${{ secrets.OIDC_IAM_ROLE }}
   AWS_REGION: ap-northeast-1
 
-jobs:
-  setup:
-    name: setup matrx
-    runs-on: ubuntu-latest
-    outputs:
-      files: ${{ steps.create-matrix.outputs.files }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: create matrix
-        id: create-matrix
-        run: |
-          echo "files=$(ls cdk.out | grep .template.json | jq -R . | jq -s -c .)" >> $GITHUB_OUTPUT
-          
+jobs:     
   synth_cdk:
+    name: CDK synth
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -68,7 +57,20 @@ jobs:
       - name: CDK Synth
         run: |
           ${{ steps.set-var.outputs.synth_cmd }}
+  setup:
+    needs: synth_cdk
+    name: setup matrix
+    runs-on: ${{needs.synth_cdk.outputs.RUNNER}}
+    outputs:
+      files: ${{ steps.create-matrix.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: create matrix
+        id: create-matrix
+        run: |
+          echo "files=$(ls cdk.out | grep .template.json | jq -R . | jq -s -c .)" >> $GITHUB_OUTPUT
   run_iam_access_analyzer:
+    name: run iam access analyzer custom policy checks
     needs: [ setup, synth_cdk ]
     runs-on: ${{needs.synth_cdk.outputs.RUNNER}}
     defaults:
