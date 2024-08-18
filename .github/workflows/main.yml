@@ -27,7 +27,7 @@ jobs:
      RUNNER: ${{ runner.name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set using var
         id: set-var
         run: |
@@ -43,7 +43,7 @@ jobs:
           role-session-name: GitHubSessionName
           
       - name: Cache CDK Dependency
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache_cdk_dependency_id
         env:
           cache-name: cache-cdk-dependency
@@ -57,6 +57,8 @@ jobs:
       - name: CDK Synth
         run: |
           ${{ steps.set-var.outputs.synth_cmd }}
+      - run: echo "selected runner = ${{ runner.name }}"
+      
   setup:
     needs: synth_cdk
     name: setup matrix
