@@ -1,4 +1,4 @@
-name: Synth CDK and generate CFn files
+name: Synth CDK and run iam-access-analyzer custom policy checks
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ env:
   AWS_REGION: ap-northeast-1
 
 jobs:
-  synth_cdk:
+  synth_cdk_and_run_iam_access_analyzer:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -66,7 +66,7 @@ jobs:
         uses: aws-actions/cloudformation-aws-iam-policy-validator@v1.0.1
         with:
           policy-check-type: 'CHECK_NO_NEW_ACCESS'
-          template-path: './cdk-stack.template.json'
+          template-path: './cdk.out/cdk-stack.template.json'
           reference-policy: './reference-identity-policy.json'
           reference-policy-type: "IDENTITY"
           region: ${{env.AWS_REGION}}
