@@ -27,7 +27,8 @@ jobs:
      CFnFileNames: ${{ steps.create-matrix.outputs.files }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
       - name: Set using var
         id: set-var
         run: |
@@ -35,21 +36,13 @@ jobs:
           SYNTH_CMD="npx cdk synth"
           echo "synth_role=$ROLE" >> $GITHUB_OUTPUT
           echo "synth_cmd=$SYNTH_CMD" >> $GITHUB_OUTPUT
+
       - name: Assume Role
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ steps.set-var.outputs.synth_role }}
           aws-region: ${{env.AWS_REGION}}
           role-session-name: GitHubSessionName
-          
-      - name: Cache CDK Dependency
-        uses: actions/cache@v3
-        id: cache_cdk_dependency_id
-        env:
-          cache-name: cache-cdk-dependency
-        with:
-          path: ./cdk/node_modules
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
         run: npm install
@@ -66,6 +59,7 @@ jobs:
         with:
           name: cdk.out
           path: cdk.out
+
   run_iam_access_analyzer:
     name: run iam access analyzer custom policy checks
     needs: synth_cdk
@@ -78,7 +72,24 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Set using var
+        id: set-var
+        run: |
+          ROLE=${{ env.AWS_OIDC_ROLE_ARN }}
+          SYNTH_CMD="npx cdk synth"
+          echo "synth_role=$ROLE" >> $GITHUB_OUTPUT
+          echo "synth_cmd=$SYNTH_CMD" >> $GITHUB_OUTPUT
+
+      - name: Assume Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.set-var.outputs.synth_role }}
+          aws-region: ${{env.AWS_REGION}}
+          role-session-name: GitHubSessionName
+
       - uses: actions/download-artifact@master
         with:
           name: cdk.out
