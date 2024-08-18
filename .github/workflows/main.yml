@@ -19,9 +19,6 @@ env:
 jobs:
   synth_cdk:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: cdk
     permissions:
       id-token: write
       contents: read
