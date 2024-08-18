@@ -10,3 +10,10 @@ new CdkStarterStack(app, 'cdk-stack', {
     account: process.env.CDK_DEFAULT_ACCOUNT,
   },
 });
+new CdkStarterStack(app, 'cdk-stack-2', {
+  stackName: 'cdk-stack-2',
+  env: {
+    region: process.env.CDK_DEFAULT_REGION,
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+  },
+});
