@@ -51,7 +51,9 @@ export class CdkStarterStack extends cdk.Stack {
         statements: [
           new iam.PolicyStatement({
             actions: ['logs:PutLogEvents'],
-            resources: ['*'],
+            notResources: [
+              'arn:aws:logs:ap-northeast-1:587273731068:log-group:/important-log-group:*'
+            ],
           }),
         ],
       }),
