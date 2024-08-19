@@ -30,14 +30,6 @@ export class CdkStarterStack extends cdk.Stack {
       ],
     });
 
-    // 👇 add an Inline Policy to role
-    role.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ['logs:CreateLogGroup', 'logs:CreateLogStream'],
-        resources: ['*'],
-      }),
-    );
-
     // 👇 add a Managed Policy to role
     role.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName(
