@@ -30,13 +30,6 @@ export class CdkStarterStack extends cdk.Stack {
       ],
     });
 
-    // 👇 add a Managed Policy to role
-    role.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName(
-        'service-role/AmazonAPIGatewayPushToCloudWatchLogs',
-      ),
-    );
-
     // 👇 attach an Inline Policy to role
     role.attachInlinePolicy(
       new iam.Policy(this, 'cw-logs', {
