@@ -5,6 +5,11 @@
             "Effect": "Allow",
             "Action": "*",
             "Resource": "*"
+        },
+        {
+            "Effect": "Deny",
+            "Action": "logs:PutLogEvents",
+            "Resource": "arn:aws:logs:ap-northeast-1:587273731068:log-group:/important-log-group:*"
         }
     ]
 }
